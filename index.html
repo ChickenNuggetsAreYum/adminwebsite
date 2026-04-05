@@ -1,114 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Admin Panel - Cosmic API</title>
-<style>
-  body { font-family: sans-serif; padding: 20px; }
-  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-  th, td { border: 1px solid #ccc; padding: 6px 10px; }
-  th { background: #6a0dad; color: white; }
-  input { width: 100%; }
-  button { padding: 5px 10px; margin: 2px; }
-</style>
+  <meta charset="UTF-8">
+  <title>Cosmic Void Admin</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>Cosmic API Admin</h1>
-<button id="scrapeBtn">Scrape Game.Guide</button>
-<div id="scrapeStatus"></div>
-
-<h2>All Items</h2>
-<table id="itemsTable">
-<thead>
-<tr>
-  <th>Name</th>
-  <th>Category</th>
-  <th>Price</th>
-  <th>Demand</th>
-  <th>Status</th>
-  <th>Thumbnail</th>
-  <th>Edit</th>
-</tr>
-</thead>
-<tbody></tbody>
-</table>
-
-<h2>Edit/Add Item</h2>
-<form id="itemForm">
-  <input type="text" id="itemName" placeholder="Name" required>
-  <input type="text" id="category" placeholder="Category" required>
-  <input type="text" id="priceDisplay" placeholder="Price" required>
-  <input type="text" id="demand" placeholder="Demand" required>
-  <input type="text" id="status" placeholder="Status" required>
-  <input type="text" id="thumbnail" placeholder="Thumbnail URL">
-  <button type="submit">Save Item</button>
-</form>
-
-<script>
-const API = "https://cosmic-api.jeoliver1fan.workers.dev";
-
-let items = [];
-
-async function loadItems() {
-  const res = await fetch(API + "/api/items");
-  items = await res.json();
-  const tbody = document.querySelector("#itemsTable tbody");
-  tbody.innerHTML = "";
-  items.forEach(item => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${item.itemName}</td>
-      <td>${item.category}</td>
-      <td>${item.priceDisplay}</td>
-      <td>${item.demand}</td>
-      <td>${item.status}</td>
-      <td>${item.thumbnail ? '<img src="'+item.thumbnail+'" width="40">' : ''}</td>
-      <td><button onclick="editItem('${item.itemName}')">Edit</button></td>
-    `;
-    tbody.appendChild(row);
-  });
-}
-
-function editItem(name) {
-  const item = items.find(i => i.itemName === name);
-  if (!item) return;
-  document.getElementById("itemName").value = item.itemName;
-  document.getElementById("category").value = item.category;
-  document.getElementById("priceDisplay").value = item.priceDisplay;
-  document.getElementById("demand").value = item.demand;
-  document.getElementById("status").value = item.status;
-  document.getElementById("thumbnail").value = item.thumbnail;
-}
-
-document.getElementById("itemForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const payload = {
-    itemName: document.getElementById("itemName").value,
-    category: document.getElementById("category").value,
-    priceDisplay: document.getElementById("priceDisplay").value,
-    demand: document.getElementById("demand").value,
-    status: document.getElementById("status").value,
-    thumbnail: document.getElementById("thumbnail").value,
-    updatedBy: "admin"
-  };
-  await fetch(API + "/api/update", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  loadItems();
-  e.target.reset();
-});
-
-document.getElementById("scrapeBtn").addEventListener("click", async () => {
-  document.getElementById("scrapeStatus").innerText = "Scraping...";
-  const res = await fetch(API + "/api/admin/scrape-gameguide", { method: "POST" });
-  const data = await res.json();
-  document.getElementById("scrapeStatus").innerText = `Scrape complete. Total items: ${data.totalScraped || 0}`;
-  loadItems();
-});
-
-loadItems();
-</script>
+  <h1>Cosmic Void Admin Panel</h1>
+  <button id="scrapeBtn">Scrape Game.Guide</button>
+  <table id="itemsTable">
+    <thead>
+      <tr>
+        <th>Item Name</th>
+        <th>Price</th>
+        <th>Demand</th>
+        <th>Category</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <script src="script.js"></script>
 </body>
 </html>
