@@ -1,0 +1,33 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 40px;
+  background: #1a1a1a;
+  color: #f0f0f0;
+}
+h1, h2 {
+  color: #9b59b6;
+}
+input {
+  display: block;
+  margin: 8px 0;
+  padding: 6px;
+  width: 300px;
+}
+button {
+  background: #9b59b6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+button:hover {
+  background: #7d3ea6;
+}
+pre {
+  background: #2c2c2c;
+  padding: 10px;
+  margin-top: 20px;
+  overflow-x: auto;
+  max-width: 800px;
+}
