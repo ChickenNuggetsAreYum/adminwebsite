@@ -1,12 +1,14 @@
 const API_BASE = "https://cosmic-api.jeoliver1fan.workers.dev";
 
 const tableBody = document.querySelector("#itemsTable tbody");
-const scrapeBtn = document.getElementById("scrapeBtn");
-const addBtn = document.getElementById("addBtn");
+const refreshBtn = document.getElementById("refreshBtn");
+const addNewBtn = document.getElementById("addNewBtn");
 
-async function fetchItems() {
+// Fetch and display items
+async function loadItems() {
   const res = await fetch(`${API_BASE}/api/items`);
   const items = await res.json();
+
   tableBody.innerHTML = "";
   items.forEach(item => {
     const tr = document.createElement("tr");
@@ -14,59 +16,62 @@ async function fetchItems() {
       <td>${item.itemName}</td>
       <td>${item.priceDisplay}</td>
       <td>${item.demand}</td>
-      <td>${item.updatedBy}</td>
       <td>
-        <button onclick='editItem("${item.itemName}")'>Edit</button>
+        <button onclick='editItem("${item.itemName}", "${item.priceDisplay}", "${item.demand}")'>Edit</button>
       </td>
     `;
     tableBody.appendChild(tr);
   });
 }
 
-async function scrapeGameGuide() {
-  scrapeBtn.disabled = true;
-  scrapeBtn.textContent = "Scraping...";
-  const res = await fetch(`${API_BASE}/api/admin/scrape-gameguide`, { method: "POST" });
-  const data = await res.json();
-  alert(`Scraped ${data.totalScraped} items!`);
-  scrapeBtn.disabled = false;
-  scrapeBtn.textContent = "Scrape Game.Guide";
-  fetchItems();
-}
+// Edit handler
+function editItem(name, price, demand) {
+  const newName = prompt("Edit name:", name);
+  if (newName === null) return;
 
-async function editItem(itemName) {
-  const price = prompt("New Price for " + itemName);
-  if (price === null) return;
-  const demand = prompt("New Demand for " + itemName);
-  if (demand === null) return;
+  const newPrice = prompt("Edit price:", price);
+  if (newPrice === null) return;
 
-  await fetch(`${API_BASE}/api/update`, {
+  const newDemand = prompt("Edit demand:", demand);
+  if (newDemand === null) return;
+
+  fetch(`${API_BASE}/api/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemName, priceDisplay: price, demand, updatedBy: "admin" }),
-  });
-
-  fetchItems();
+    body: JSON.stringify({
+      itemName: newName,
+      priceDisplay: newPrice,
+      demand: newDemand,
+      updatedBy: "admin"
+    })
+  }).then(() => loadItems());
 }
 
-async function addNewItem() {
-  const name = prompt("Item Name");
+// Add new item
+addNewBtn.addEventListener("click", () => {
+  const name = prompt("New item name:");
   if (!name) return;
-  const price = prompt("Price");
+
+  const price = prompt("Enter price:");
   if (price === null) return;
-  const demand = prompt("Demand");
+
+  const demand = prompt("Enter demand:");
   if (demand === null) return;
 
-  await fetch(`${API_BASE}/api/update`, {
+  fetch(`${API_BASE}/api/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemName: name, priceDisplay: price, demand, updatedBy: "admin" }),
-  });
+    body: JSON.stringify({
+      itemName: name,
+      priceDisplay: price,
+      demand,
+      updatedBy: "admin"
+    })
+  }).then(() => loadItems());
+});
 
-  fetchItems();
-}
+// Refresh list
+refreshBtn.addEventListener("click", loadItems);
 
-scrapeBtn.addEventListener("click", scrapeGameGuide);
-addBtn.addEventListener("click", addNewItem);
-
-fetchItems();
+// Load on open
+loadItems();
