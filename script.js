@@ -2,6 +2,7 @@ const API_BASE = "https://cosmic-api.jeoliver1fan.workers.dev";
 
 const tableBody = document.querySelector("#itemsTable tbody");
 const scrapeBtn = document.getElementById("scrapeBtn");
+const addBtn = document.getElementById("addBtn");
 
 async function fetchItems() {
   const res = await fetch(`${API_BASE}/api/items`);
@@ -13,9 +14,10 @@ async function fetchItems() {
       <td>${item.itemName}</td>
       <td>${item.priceDisplay}</td>
       <td>${item.demand}</td>
-      <td>${item.category}</td>
-      <td>${item.status}</td>
-      <td><button onclick='updateItem("${item.itemName}")'>Update</button></td>
+      <td>${item.updatedBy}</td>
+      <td>
+        <button onclick='editItem("${item.itemName}")'>Edit</button>
+      </td>
     `;
     tableBody.appendChild(tr);
   });
@@ -32,18 +34,39 @@ async function scrapeGameGuide() {
   fetchItems();
 }
 
-async function updateItem(itemName) {
-  const newPrice = prompt("Enter new price for " + itemName);
-  if (!newPrice) return;
-  const res = await fetch(`${API_BASE}/api/update`, {
+async function editItem(itemName) {
+  const price = prompt("New Price for " + itemName);
+  if (price === null) return;
+  const demand = prompt("New Demand for " + itemName);
+  if (demand === null) return;
+
+  await fetch(`${API_BASE}/api/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ itemName, priceDisplay: newPrice }),
+    body: JSON.stringify({ itemName, priceDisplay: price, demand, updatedBy: "admin" }),
   });
-  const data = await res.json();
-  alert(data.message);
+
+  fetchItems();
+}
+
+async function addNewItem() {
+  const name = prompt("Item Name");
+  if (!name) return;
+  const price = prompt("Price");
+  if (price === null) return;
+  const demand = prompt("Demand");
+  if (demand === null) return;
+
+  await fetch(`${API_BASE}/api/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itemName: name, priceDisplay: price, demand, updatedBy: "admin" }),
+  });
+
   fetchItems();
 }
 
 scrapeBtn.addEventListener("click", scrapeGameGuide);
+addBtn.addEventListener("click", addNewItem);
+
 fetchItems();
