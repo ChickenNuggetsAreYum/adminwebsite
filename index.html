@@ -1,29 +1,324 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Cosmic Void Admin Panel</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Thumbnail Picker</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d0f14;
+      color: white;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 24px;
+    }
+
+    .box {
+      background: #141824;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 5px;
+      font-weight: bold;
+    }
+
+    .btn {
+      background: #3a6df0;
+      color: white;
+    }
+
+    .btn:hover {
+      opacity: 0.8;
+    }
+
+    .skip {
+      background: #444;
+      color: white;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .card {
+      background: #1a2032;
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .card img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .card p {
+      font-size: 12px;
+      opacity: 0.8;
+      margin: 8px 0;
+      height: 32px;
+      overflow: hidden;
+    }
+
+    .useBtn {
+      width: 100%;
+      background: #2ecc71;
+      color: black;
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 6px;
+    }
+
+    .useBtn:hover {
+      opacity: 0.8;
+    }
+
+    .fullBtn {
+      width: 100%;
+      background: #f1c40f;
+      color: black;
+      padding: 8px;
+      border-radius: 8px;
+      margin-top: 6px;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 14px;
+      opacity: 0.85;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      margin-top: 10px;
+      background: #0d0f14;
+      color: white;
+    }
+
+    .progress {
+      font-size: 14px;
+      margin-top: 8px;
+      opacity: 0.8;
+    }
+
+    .manualBox {
+      margin-top: 15px;
+      background: #0d0f14;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .manualBox button {
+      background: #9b59b6;
+      color: white;
+      width: 100%;
+      margin-top: 8px;
+    }
+  </style>
 </head>
+
 <body>
 
-  <h1>Cosmic Void Admin Panel</h1>
+  <h1>Thumbnail Picker</h1>
 
-  <button id="refreshBtn">Refresh List</button>
-  <button id="addNewBtn">Add New Item</button>
+  <div class="box">
+    <div class="status" id="configStatus">Loading config...</div>
+    <button class="btn" onclick="loadNext()">Load Next Missing Item</button>
+  </div>
 
-  <table id="itemsTable">
-    <thead>
-      <tr>
-        <th>Item Name</th>
-        <th>Price</th>
-        <th>Demand</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div class="box" id="itemBox" style="display:none;">
+    <h2 id="itemNameText"></h2>
 
-  <script src="script.js"></script>
+    <div class="progress" id="progressText"></div>
+
+    <button class="skip" onclick="skipItem()">Skip Item</button>
+
+    <div class="status" id="statusText">Searching...</div>
+
+    <div class="manualBox">
+      <label>Manual Thumbnail URL (if search results suck):</label>
+      <input id="manualUrl" placeholder="https://example.com/image.png">
+      <button onclick="useManualUrl()">Use Manual URL</button>
+    </div>
+
+    <div class="grid" id="resultsGrid"></div>
+  </div>
+
+<script>
+  let currentItem = null;
+  let googleScriptUrl = null;
+
+  async function loadConfig() {
+    try {
+      const res = await fetch("/config");
+      const data = await res.json();
+
+      if (data.googleScriptUrl) {
+        googleScriptUrl = data.googleScriptUrl;
+        document.getElementById("configStatus").textContent =
+          "Connected to Google Script ✔";
+      } else {
+        document.getElementById("configStatus").textContent =
+          "Config error: Missing googleScriptUrl";
+      }
+    } catch (err) {
+      document.getElementById("configStatus").textContent =
+        "Config failed: " + err.toString();
+    }
+  }
+
+  async function loadNext() {
+    if (!googleScriptUrl) {
+      alert("Google Script URL is missing. Add GOOGLE_SCRIPT_URL env var in Cloudflare.");
+      return;
+    }
+
+    document.getElementById("statusText").textContent = "Loading item...";
+    document.getElementById("resultsGrid").innerHTML = "";
+    document.getElementById("itemBox").style.display = "none";
+    document.getElementById("manualUrl").value = "";
+
+    const res = await fetch(googleScriptUrl + "?action=getNextMissingThumbnail");
+    const data = await res.json();
+
+    if (!data.found) {
+      alert("No missing thumbnails left!");
+      return;
+    }
+
+    currentItem = data.itemName;
+
+    document.getElementById("itemBox").style.display = "block";
+    document.getElementById("itemNameText").textContent = "Item: " + currentItem;
+
+    await loadProgress();
+
+    document.getElementById("statusText").textContent = "Searching images...";
+    await searchImages(currentItem);
+  }
+
+  async function loadProgress() {
+    if (!googleScriptUrl) return;
+
+    const res = await fetch(googleScriptUrl + "?action=getMissingList");
+    const data = await res.json();
+
+    if (data.count !== undefined) {
+      document.getElementById("progressText").textContent =
+        "Remaining missing thumbnails: " + data.count;
+    } else {
+      document.getElementById("progressText").textContent =
+        "Progress unavailable.";
+    }
+  }
+
+  async function searchImages(query) {
+    const grid = document.getElementById("resultsGrid");
+    grid.innerHTML = "";
+
+    const boostedQuery = query + " creatures of sonaria";
+
+    const res = await fetch("/search-images?q=" + encodeURIComponent(boostedQuery));
+    const data = await res.json();
+
+    if (!data.results || data.results.length === 0) {
+      document.getElementById("statusText").textContent = "No images found.";
+      return;
+    }
+
+    document.getElementById("statusText").textContent =
+      "Found " + data.results.length + " images. Pick one:";
+
+    data.results.forEach(img => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <img src="${img.thumbnail}" alt="preview">
+        <p>${img.title || "Untitled"}</p>
+        <button class="useBtn">Use This</button>
+        <button class="fullBtn">View Full</button>
+      `;
+
+      card.querySelector(".useBtn").onclick = () => {
+        setThumbnail(img.original || img.thumbnail);
+      };
+
+      card.querySelector(".fullBtn").onclick = () => {
+        window.open(img.original || img.thumbnail, "_blank");
+      };
+
+      grid.appendChild(card);
+    });
+  }
+
+  async function setThumbnail(thumbnailUrl) {
+    if (!currentItem) {
+      alert("No current item loaded.");
+      return;
+    }
+
+    document.getElementById("statusText").textContent = "Saving thumbnail...";
+
+    const res = await fetch(googleScriptUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "setThumbnail",
+        itemName: currentItem,
+        thumbnail: thumbnailUrl
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      document.getElementById("statusText").textContent =
+        "Saved! Loading next item...";
+      setTimeout(loadNext, 800);
+    } else {
+      alert("Failed: " + JSON.stringify(data));
+    }
+  }
+
+  function useManualUrl() {
+    const manual = document.getElementById("manualUrl").value.trim();
+
+    if (!manual) {
+      alert("Paste a URL first.");
+      return;
+    }
+
+    setThumbnail(manual);
+  }
+
+  async function skipItem() {
+    document.getElementById("statusText").textContent = "Skipped. Loading next...";
+    setTimeout(loadNext, 500);
+  }
+
+  loadConfig();
+</script>
+
 </body>
 </html>
